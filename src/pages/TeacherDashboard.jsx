@@ -148,8 +148,14 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
 
   return (
     <div className="min-h-screen pt-16 pb-12 px-4 max-w-lg mx-auto">
-      <div className="pt-4 mb-4 flex items-center justify-between">
-        <button onClick={onBack} className="text-gray-400 hover:text-gray-600 text-sm">← 홈으로</button>
+      <div className="pt-4 mb-6 flex items-center justify-between">
+        <button
+          onClick={onBack}
+          className="bg-white border-2 border-gray-100 p-3 rounded-full shadow-sm hover:shadow-md transition-all group"
+          title="홈으로 가기"
+        >
+          <span className="text-xl group-hover:scale-110 transition-transform inline-block">🏠</span>
+        </button>
         <h1 className="font-black text-gray-700">👩🏫 선생님 대시보드</h1>
         <div></div>
       </div>

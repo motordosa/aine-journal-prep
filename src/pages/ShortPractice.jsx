@@ -115,12 +115,13 @@ export default function ShortPractice({ profile, onDone }) {
     <div className="min-h-screen pt-16 pb-8 px-4 max-w-lg mx-auto">
       {loading && <LoadingOverlay />}
 
-      <div className="pt-4 mb-4">
+      <div className="pt-4 mb-6">
         <button
           onClick={() => onDone(undefined)}
-          className="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1"
+          className="bg-white border-2 border-gray-100 p-3 rounded-full shadow-sm hover:shadow-md transition-all group"
+          title="홈으로 가기"
         >
-          ← 홈으로
+          <span className="text-xl group-hover:scale-110 transition-transform inline-block">🏠</span>
         </button>
       </div>
 

@@ -38,9 +38,15 @@ export default function SummaryPractice({ profile, onDone }) {
     setFeedback(null);
     setError('');
     try {
+      const pScore = profile.totalScore || 0;
+      let diffHint = "초등학교 6학년 수준";
+      if (pScore < 60) diffHint = "초등학교 3-4학년 수준의 짧고 쉬운 지문 (10-15줄)";
+      else if (pScore < 180) diffHint = "초등학교 5-6학년 수준의 표준 지문 (20줄)";
+      else diffHint = "중학교 1학년 수준의 전문적이고 긴 지문 (25-30줄)";
+
       const res = await callClaude(
         SUMMARY_PASSAGE_PROMPT,
-        '초등학교 6학년 수준의 읽기 지문을 하나 생성해주세요. 카테고리는 무작위로 선택하세요.',
+        `${diffHint}을 하나 생성해주세요. 카테고리는 무작위로 선택하세요.`,
         2000
       );
       setPassage(res);
@@ -87,16 +93,17 @@ ${summaryText}`;
     <div className="min-h-screen pt-16 pb-8 px-4 max-w-lg mx-auto">
       {loading && <LoadingOverlay />}
 
-      <div className="pt-4 mb-4 flex items-center gap-3">
+      <div className="pt-4 mb-6 flex items-center gap-3">
         <button
           onClick={() => onDone(undefined)}
-          className="text-gray-400 hover:text-gray-600 text-sm"
+          className="bg-white border-2 border-gray-100 p-3 rounded-full shadow-sm hover:shadow-md transition-all group"
+          title="홈으로 가기"
         >
-          ← 홈으로
+          <span className="text-xl group-hover:scale-110 transition-transform inline-block">🏠</span>
         </button>
         <button
           onClick={loadPassage}
-          className="ml-auto text-purple-500 hover:text-purple-700 text-sm font-bold"
+          className="ml-auto bg-purple-100 text-purple-600 px-4 py-2 rounded-xl text-sm font-black hover:bg-purple-200 transition-colors flex items-center gap-1"
           disabled={loading || step === 'loading'}
         >
           🔄 새 지문

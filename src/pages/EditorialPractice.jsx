@@ -120,12 +120,13 @@ export default function EditorialPractice({ profile, onDone }) {
     <div className="min-h-screen pt-16 pb-8 px-4 max-w-lg mx-auto">
       {loading && <LoadingOverlay />}
 
-      <div className="pt-4 mb-4">
+      <div className="pt-4 mb-6">
         <button
           onClick={() => onDone(undefined)}
-          className="text-gray-400 hover:text-gray-600 text-sm"
+          className="bg-white border-2 border-gray-100 p-3 rounded-full shadow-sm hover:shadow-md transition-all group"
+          title="홈으로 가기"
         >
-          ← 홈으로
+          <span className="text-xl group-hover:scale-110 transition-transform inline-block">🏠</span>
         </button>
       </div>
 
@@ -146,40 +147,26 @@ export default function EditorialPractice({ profile, onDone }) {
             </button>
           </div>
 
-          {/* Tab navigation */}
-          <div className="flex gap-2 mb-4">
+          <div className="space-y-8 mb-8">
             {TABS.map(t => (
-              <button
-                key={t.key}
-                onClick={() => setActiveTab(t.key)}
-                className={`flex-1 flex flex-col items-center py-3 rounded-2xl font-black text-sm transition-all ${
-                  activeTab === t.key
-                    ? 'bg-orange-400 text-white shadow-lg scale-105'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}
-              >
-                <span className="text-lg">{t.emoji}</span>
-                <span>{t.label}</span>
-                <span className="text-xs mt-0.5 opacity-70">{texts[t.key].length}자</span>
-              </button>
+              <div key={t.key} className="slide-up">
+                <div className="flex items-center gap-2 mb-2 pl-1">
+                  <span className="text-2xl">{t.emoji}</span>
+                  <span className="text-lg font-black text-gray-700">{t.label}</span>
+                </div>
+                <div className="bg-orange-50 bg-opacity-50 border border-orange-100 rounded-2xl p-4 mb-3 text-xs text-gray-500 whitespace-pre-line leading-relaxed">
+                  {t.hint}
+                </div>
+                <textarea
+                  value={texts[t.key]}
+                  onChange={e => setTexts(prev => ({ ...prev, [t.key]: e.target.value }))}
+                  placeholder={`${t.label}을 여기에 써보세요...`}
+                  className="w-full h-44 border-2 border-gray-200 rounded-3xl p-5 text-base focus:outline-none focus:border-orange-400 resize-none transition-all shadow-sm focus:shadow-md"
+                />
+                <div className="text-right text-xs text-gray-400 mt-2 font-bold">{texts[t.key].length}자</div>
+              </div>
             ))}
           </div>
-
-          {/* Active tab content */}
-          {TABS.map(t => t.key === activeTab && (
-            <div key={t.key} className="slide-up">
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-3 text-xs text-gray-500 whitespace-pre-line leading-relaxed">
-                {t.hint}
-              </div>
-              <textarea
-                value={texts[t.key]}
-                onChange={e => setTexts(prev => ({ ...prev, [t.key]: e.target.value }))}
-                placeholder={`${t.label}을 여기에 써보세요...`}
-                className="w-full h-40 border-2 border-gray-200 rounded-2xl p-4 text-base focus:outline-none focus:border-orange-400 resize-none"
-              />
-              <div className="text-right text-xs text-gray-400 mt-1">{texts[t.key].length}자</div>
-            </div>
-          ))}
 
           <div className="flex gap-2 mt-4">
             <button

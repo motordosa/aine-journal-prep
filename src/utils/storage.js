@@ -59,10 +59,10 @@ export async function getSessions() {
 }
 
 export function getLevel(score) {
-  if (score < 20) return { level: 0, title: '씨앗 기자', emoji: '🌱', color: 'from-green-200 to-green-300' };
-  if (score < 40) return { level: 1, title: '새싹 기자', emoji: '🌿', color: 'from-green-300 to-teal-300' };
-  if (score < 60) return { level: 2, title: '꽃봉오리 기자', emoji: '🌸', color: 'from-pink-200 to-pink-300' };
-  if (score < 80) return { level: 3, title: '별빛 기자', emoji: '⭐', color: 'from-yellow-200 to-yellow-300' };
+  if (score < 60) return { level: 0, title: '씨앗 기자', emoji: '🌱', color: 'from-green-200 to-green-300' };
+  if (score < 120) return { level: 1, title: '새싹 기자', emoji: '🌿', color: 'from-green-300 to-teal-300' };
+  if (score < 180) return { level: 2, title: '꽃봉오리 기자', emoji: '🌸', color: 'from-pink-200 to-pink-300' };
+  if (score < 240) return { level: 3, title: '별빛 기자', emoji: '⭐', color: 'from-yellow-200 to-yellow-300' };
   return { level: 4, title: '슈퍼 기자', emoji: '🏆', color: 'from-orange-200 to-orange-300' };
 }
 

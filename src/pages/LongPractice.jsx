@@ -56,7 +56,7 @@ function Guide({ onStart }) {
 export default function LongPractice({ profile, onDone }) {
   const [step, setStep] = useState('guide');
   const [topic, setTopic] = useState('');
-  const [text, setText] = useState('');
+  const [texts, setTexts] = useState({ intro: '', body: '', conclusion: '' });
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
@@ -79,12 +79,15 @@ export default function LongPractice({ profile, onDone }) {
     }
   };
 
+  const totalLen = Object.values(texts).join('').length;
+
   const submit = async () => {
-    if (text.trim().length < 100) { setError('조금 더 자세히 써봐요! 최소 100자 이상이 필요해요.'); return; }
+    if (totalLen < 100) { setError('조금 더 자세히 써봐요! 최소 100자 이상이 필요해요.'); return; }
     setError('');
     setLoading(true);
     try {
-      const res = await callClaude(LONG_SYSTEM_PROMPT, `주제: ${topic}\n\n학생이 쓴 글:\n${text}`);
+      const fullText = `서론: ${texts.intro}\n본론: ${texts.body}\n결론: ${texts.conclusion}`;
+      const res = await callClaude(LONG_SYSTEM_PROMPT, `주제: ${topic}\n\n학생이 쓴 글:\n${fullText}`);
       setFeedback(res);
       setScore(res.score);
       setStep('feedback');
@@ -99,12 +102,13 @@ export default function LongPractice({ profile, onDone }) {
     <div className="min-h-screen pt-16 pb-8 px-4 max-w-lg mx-auto">
       {loading && <LoadingOverlay />}
 
-      <div className="pt-4 mb-4">
+      <div className="pt-4 mb-6">
         <button
           onClick={() => onDone(undefined)}
-          className="text-gray-400 hover:text-gray-600 text-sm"
+          className="bg-white border-2 border-gray-100 p-3 rounded-full shadow-sm hover:shadow-md transition-all group"
+          title="홈으로 가기"
         >
-          ← 홈으로
+          <span className="text-xl group-hover:scale-110 transition-transform inline-block">🏠</span>
         </button>
       </div>
 
@@ -125,36 +129,35 @@ export default function LongPractice({ profile, onDone }) {
             </button>
           </div>
 
-          <div className="flex gap-3 mb-2">
-            <div className="flex flex-col gap-1 text-xs text-center w-14 flex-shrink-0">
-              {[['🎬', '도입'], ['📖', '전개'], ['🎯', '마무리']].map(([e, s]) => (
-                <div key={s} className="bg-gray-100 rounded-lg p-1.5 text-gray-500 font-bold">
-                  <div>{e}</div>
-                  <div>{s}</div>
-                </div>
-              ))}
-            </div>
-            <div className="flex-1">
-              <textarea
-                value={text}
-                onChange={e => setText(e.target.value)}
-                placeholder="도입 → 전개 → 마무리 순서로 3~5문장을 써보세요..."
-                className="w-full h-48 border-2 border-gray-200 rounded-2xl p-4 text-base focus:outline-none focus:border-green-400 resize-none"
-              />
-            </div>
+          <div className="space-y-6 mb-6">
+            {[
+              { key: 'intro', label: '🎬 도입', placeholder: '어떤 이야기를 할지 소개해주세요...' },
+              { key: 'body', label: '📖 전개', placeholder: '자세한 내용을 더해주세용...' },
+              { key: 'conclusion', label: '🎯 마무리', placeholder: '생각을 정리해주세요...' },
+            ].map(s => (
+              <div key={s.key}>
+                <label className="block text-sm font-black text-gray-700 mb-2 pl-1">{s.label}</label>
+                <textarea
+                  value={texts[s.key]}
+                  onChange={e => setTexts(prev => ({ ...prev, [s.key]: e.target.value }))}
+                  placeholder={s.placeholder}
+                  className="w-full h-32 border-2 border-gray-200 rounded-2xl p-4 text-base focus:outline-none focus:border-green-400 resize-none transition-colors"
+                />
+              </div>
+            ))}
           </div>
+
           <div className="flex justify-between items-center text-xs mt-1 mb-4">
-            <span className={text.length < 100 ? 'text-red-400 font-bold' : 'text-green-500 font-bold'}>
-              {text.length < 100 ? `⚠️ ${100 - text.length}자 더 필요해요` : '✅ 충분해요!'}
+            <span className={totalLen < 100 ? 'text-red-400 font-bold' : 'text-green-500 font-bold'}>
+              {totalLen < 100 ? `⚠️ ${100 - totalLen}자 더 필요해요` : '✅ 충분해요!'}
             </span>
-            <span className="text-gray-400">{text.length}자 / 최소 100자</span>
+            <span className="text-gray-400">{totalLen}자 / 최소 100자</span>
           </div>
 
           {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
 
           <button
-            onClick={submit}
-            disabled={text.trim().length < 100}
+            disabled={totalLen < 100}
             className="w-full bg-gradient-to-r from-green-400 to-teal-400 text-white font-black py-5 rounded-2xl text-xl shadow-xl hover:from-green-500 hover:to-teal-500 disabled:opacity-50"
           >
             📤 선생님께 보내기
@@ -167,7 +170,7 @@ export default function LongPractice({ profile, onDone }) {
           feedback={feedback}
           mode="long"
           score={score}
-          onDone={() => onDone(score, 'long', topic, text, feedback)}
+          onDone={() => onDone(score, 'long', topic, `서론: ${texts.intro}\n본론: ${texts.body}\n결론: ${texts.conclusion}`, feedback)}
         />
       )}
     </div>

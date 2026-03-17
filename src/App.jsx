@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import confetti from 'canvas-confetti';
 import './index.css';
 import TimerBar from './components/TimerBar';
 import ProfileModal from './components/ProfileModal';
@@ -66,7 +67,12 @@ export default function App() {
 
     if (newLevel > prevLevel) {
       setIsLevelUp(true);
-      setTimeout(() => setIsLevelUp(false), 3000);
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      setTimeout(() => setIsLevelUp(false), 4000);
     }
 
     setPage('home');
