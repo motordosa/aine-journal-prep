@@ -25,7 +25,7 @@ export default function TimerBar() {
           {isExpired ? '00:00' : timeDisplay}
         </div>
         <span className="text-white text-xs opacity-70">
-          {isExpired ? '결과를 저장하세요' : '40분 세션'}
+          {isExpired ? '결과를 저장하세요' : '50분 세션'}
         </span>
       </div>
     </div>

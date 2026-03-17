@@ -5,7 +5,7 @@ import { useSession } from '../context/SessionContext';
 export default function HomePage({ profile, onNavigate, onOpenTeacher }) {
   const { title } = getLevel(profile.totalScore);
   const badges = getStreakBadges(profile);
-  const { isExpired, timeDisplay } = useSession();
+  const { isExpired, timeDisplay, resetSession } = useSession();
 
   const modes = [
     {
@@ -67,8 +67,14 @@ export default function HomePage({ profile, onNavigate, onOpenTeacher }) {
       {isExpired && (
         <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 mb-4 text-center">
           <div className="text-2xl mb-1">⏰</div>
-          <p className="font-black text-red-600">40분 학습 시간이 종료되었습니다!</p>
-          <p className="text-red-400 text-sm">결과를 선생님께 제출하세요.</p>
+          <p className="font-black text-red-600">50분 학습 시간이 종료되었습니다!</p>
+          <p className="text-red-400 text-sm mb-4">결과를 선생님께 제출하세요.</p>
+          <button
+            onClick={resetSession}
+            className="w-full bg-gradient-to-r from-red-400 to-rose-500 text-white font-black py-3 rounded-xl shadow-lg hover:from-red-500 hover:to-rose-600 transition-all"
+          >
+            📤 결과 제출하고 다시 시작하기
+          </button>
         </div>
       )}
 
