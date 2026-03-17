@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { callClaude, EDITORIAL_SYSTEM_PROMPT } from '../utils/claude';
+import { useState, useEffect } from 'react';
+import { callClaude, EDITORIAL_SYSTEM_PROMPT, TOPIC_SYSTEM_PROMPT } from '../utils/claude';
 import FeedbackView from '../components/FeedbackView';
 import LoadingOverlay from '../components/LoadingOverlay';
 
@@ -62,9 +62,9 @@ function Guide({ onStart }) {
   );
 }
 
-export default function EditorialPractice({ profile, onDone, apiKey }) {
+export default function EditorialPractice({ profile, onDone }) {
   const [step, setStep] = useState('guide');
-  const [topic] = useState('학교에서 스마트폰 사용을 허용해야 할까요?');
+  const [topic, setTopic] = useState('');
   const [texts, setTexts] = useState({ intro: '', body: '', conclusion: '' });
   const [activeTab, setActiveTab] = useState('intro');
   const [showPreview, setShowPreview] = useState(false);
@@ -73,15 +73,37 @@ export default function EditorialPractice({ profile, onDone, apiKey }) {
   const [score, setScore] = useState(0);
   const [error, setError] = useState('');
 
+  const fetchNewTopic = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await callClaude(
+        TOPIC_SYSTEM_PROMPT,
+        '사설(논설문) 주제를 1개 만들어주세요 (초등학생이 찬반 의견을 쓸 수 있는 사회 주제)'
+      );
+      setTopic(res.topic || '우리 학교에서 스마트폰 사용을 허용해야 할까요?');
+    } catch (e) {
+      setError('주제 생성 중 오류가 발생했어요: ' + e.message);
+      setTopic('우리 학교에서 스마트폰 사용을 허용해야 할까요?'); // Fallback topic on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const totalLen = Object.values(texts).join('').length;
 
+  // Load topic on guide start
+  useEffect(() => {
+    fetchNewTopic();
+  }, []); // eslint-disable-line
+
   const submit = async () => {
-    if (totalLen < 50) { setError('각 부분에 조금 더 써봐요! (전체 50자 이상)'); return; }
+    if (totalLen < 300) { setError('조금 더 자세히 써봐요! 본인의 생각을 충분히 담기 위해 최소 300자 이상이 필요해요.'); return; }
     setError('');
     setLoading(true);
     try {
       const userText = `주제: ${topic}\n\n서론:\n${texts.intro}\n\n본론:\n${texts.body}\n\n결론:\n${texts.conclusion}`;
-      const res = await callClaude(EDITORIAL_SYSTEM_PROMPT, userText, apiKey);
+      const res = await callClaude(EDITORIAL_SYSTEM_PROMPT, userText);
       setFeedback(res);
       setScore(res.score);
       setStep('feedback');
@@ -111,9 +133,17 @@ export default function EditorialPractice({ profile, onDone, apiKey }) {
 
       {step === 'practice' && (
         <div className="slide-up pb-20">
-          <div className="bg-gradient-to-r from-orange-400 to-pink-400 rounded-3xl p-5 mb-5 text-white">
+          <div className="bg-gradient-to-r from-orange-400 to-pink-400 rounded-3xl p-5 mb-5 text-white relative">
             <div className="text-sm font-bold opacity-80 mb-1">✏️ 오늘의 사설 주제</div>
-            <div className="text-lg font-black">{topic}</div>
+            <div className="text-lg font-black pr-16">{topic}</div>
+            <button
+              onClick={fetchNewTopic}
+              disabled={loading}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-xl transition-all"
+              title="새 문제"
+            >
+              🔄
+            </button>
           </div>
 
           {/* Tab navigation */}
@@ -160,14 +190,19 @@ export default function EditorialPractice({ profile, onDone, apiKey }) {
             </button>
             <button
               onClick={submit}
-              disabled={totalLen < 50}
+              disabled={totalLen < 300}
               className="flex-1 bg-gradient-to-r from-orange-400 to-pink-400 text-white font-black py-4 px-6 rounded-2xl text-sm shadow-xl disabled:opacity-50 transition-all"
             >
               📤 제출하기
             </button>
           </div>
-          <div className="text-center text-xs text-gray-400 mt-2">전체 {totalLen}자</div>
-          {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
+          <div className="flex justify-between items-center text-xs mt-2 px-1">
+            <span className={totalLen < 300 ? 'text-red-400 font-bold' : 'text-green-500 font-bold'}>
+              {totalLen < 300 ? `⚠️ ${300 - totalLen}자 더 필요해요` : '✅ 충분해요!'}
+            </span>
+            <span className="text-gray-400">전체 {totalLen}자 / 최소 300자</span>
+          </div>
+          {error && <p className="text-red-500 text-sm mt-3 text-center font-bold px-2">{error}</p>}
         </div>
       )}
 

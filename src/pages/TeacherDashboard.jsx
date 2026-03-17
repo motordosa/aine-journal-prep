@@ -4,11 +4,9 @@ import { getLevel } from '../utils/storage';
 
 const PASSWORD = 'teacher1234';
 
-// Helper to clear all storage
 async function clearAllStorage() {
   try {
     if (window.storage) {
-      // Clear via window.storage if available
       const index = await window.storage.get('session_index');
       const timestamps = index ? JSON.parse(index) : [];
       for (const ts of timestamps) {
@@ -16,10 +14,8 @@ async function clearAllStorage() {
       }
       await window.storage.set('profile', null);
       await window.storage.set('session_index', null);
-      await window.storage.set('apiKey', null);
     }
   } catch {}
-  // Always clear localStorage too
   localStorage.clear();
 }
 
@@ -30,30 +26,40 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
   const [sessions, setSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // API Key section
-  const [currentApiKey, setCurrentApiKey] = useState('');
+  // API Key section (updates server at runtime)
   const [newApiKey, setNewApiKey] = useState('');
   const [apiKeySaved, setApiKeySaved] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState('');
 
-  // Reset confirm
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  // Cost status
+  const [costStatus, setCostStatus] = useState(null);
+  const [costLoading, setCostLoading] = useState(false);
+
+  const loadCostStatus = async () => {
+    setCostLoading(true);
+    try {
+      const res = await fetch('/api/cost-status');
+      const data = await res.json();
+      setCostStatus(data);
+    } catch {
+      setCostStatus(null);
+    } finally {
+      setCostLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (authed) {
-      // Load current API key for display
-      try {
-        const k = localStorage.getItem('apiKey') || '';
-        setCurrentApiKey(k);
-      } catch {}
+      loadSessions();
+      loadCostStatus();
     }
   }, [authed]);
 
   const handleLogin = () => {
     if (pw === PASSWORD) {
       setAuthed(true);
-      loadSessions();
     } else {
       setError('비밀번호가 틀렸어요!');
     }
@@ -66,15 +72,20 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
 
   const handleSaveApiKey = async () => {
     if (!newApiKey.trim()) return;
+    setApiKeyError('');
     try {
-      if (window.storage) await window.storage.set('apiKey', newApiKey.trim());
-      localStorage.setItem('apiKey', newApiKey.trim());
-      setCurrentApiKey(newApiKey.trim());
+      const res = await fetch('/api/teacher/update-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: PASSWORD, newKey: newApiKey.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       setNewApiKey('');
       setApiKeySaved(true);
       setTimeout(() => setApiKeySaved(false), 2000);
-    } catch {
-      alert('API 키 저장에 실패했어요');
+    } catch (e) {
+      setApiKeyError(e.message || 'API 키 저장에 실패했어요');
     }
   };
 
@@ -89,12 +100,12 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
     return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   };
 
-  const modeLabel = { short: '단문', long: '장문', editorial: '사설' };
-  const modeEmoji = { short: '📝', long: '📰', editorial: '🗞️' };
+  const modeLabel = { short: '단문', long: '장문', editorial: '사설', summary: '문장요약' };
+  const modeEmoji = { short: '📝', long: '📰', editorial: '🗞️', summary: '✍️' };
 
   const copyAll = async () => {
     const text = sessions.map(s =>
-      `[${formatDate(s.createdAt)}] ${modeLabel[s.mode]} 연습 - ${s.score}점\n주제: ${s.topic || '-'}\n\n학생 글:\n${s.studentText || '-'}\n\nAI 피드백:\n${JSON.stringify(s.feedback, null, 2)}\n\n${'─'.repeat(40)}\n`
+      `[${formatDate(s.createdAt)}] ${modeLabel[s.mode] || s.mode} 연습 - ${s.score}점\n주제: ${s.topic || '-'}\n\n학생 글:\n${s.studentText || '-'}\n\nAI 피드백:\n${JSON.stringify(s.feedback, null, 2)}\n\n${'─'.repeat(40)}\n`
     ).join('\n');
 
     try {
@@ -160,23 +171,53 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
         </div>
       )}
 
-      {/* ── API 키 설정 ── */}
-      <div className="bg-white border-2 border-blue-100 rounded-2xl p-5 mb-4 shadow-sm">
-        <h2 className="font-black text-blue-700 text-base mb-3">🔑 API 키 설정</h2>
-        {currentApiKey && (
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs text-gray-500">현재 키:</span>
-            <span className="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded-lg flex-1 truncate">
-              {showApiKey ? currentApiKey : currentApiKey.slice(0, 10) + '••••••••••••••••'}
-            </span>
-            <button
-              onClick={() => setShowApiKey(v => !v)}
-              className="text-xs text-blue-400 hover:text-blue-600 flex-shrink-0"
-            >
-              {showApiKey ? '숨기기' : '보기'}
-            </button>
-          </div>
+      {/* ── Cost Status ── */}
+      <div className="bg-white border-2 border-green-100 rounded-2xl p-5 mb-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-black text-green-700 text-base">💰 API 사용 비용</h2>
+          <button
+            onClick={loadCostStatus}
+            className="text-xs text-green-500 hover:text-green-700 font-bold"
+            disabled={costLoading}
+          >
+            {costLoading ? '...' : '🔄 새로고침'}
+          </button>
+        </div>
+        {costStatus ? (
+          <>
+            <div className="flex items-end gap-2 mb-2">
+              <span className="text-2xl font-black text-gray-800">${costStatus.estimatedCostUSD}</span>
+              <span className="text-gray-400 text-sm mb-0.5">/ ${costStatus.limitUSD} 한도</span>
+            </div>
+            {/* Progress bar */}
+            <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
+              <div
+                className={`h-3 rounded-full transition-all ${
+                  costStatus.isOverLimit ? 'bg-red-500' : costStatus.isNearLimit ? 'bg-orange-400' : 'bg-green-400'
+                }`}
+                style={{ width: `${Math.min(parseFloat(costStatus.percentUsed), 100)}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-gray-400">
+              <span>{costStatus.percentUsed}% 사용</span>
+              <span>입력 {(costStatus.totalInputTokens || 0).toLocaleString()} / 출력 {(costStatus.totalOutputTokens || 0).toLocaleString()} 토큰</span>
+            </div>
+            {costStatus.isOverLimit && (
+              <p className="text-red-500 font-bold text-sm mt-2">⚠️ 한도 초과! 새 API 키를 설정하거나 한도를 조정하세요.</p>
+            )}
+            {costStatus.isNearLimit && !costStatus.isOverLimit && (
+              <p className="text-orange-500 font-bold text-sm mt-2">⚠️ 한도의 90%에 도달했습니다.</p>
+            )}
+          </>
+        ) : (
+          <p className="text-gray-400 text-sm">서버에 연결 중... (백엔드가 실행 중인지 확인하세요)</p>
         )}
+      </div>
+
+      {/* ── API 키 업데이트 (런타임) ── */}
+      <div className="bg-white border-2 border-blue-100 rounded-2xl p-5 mb-4 shadow-sm">
+        <h2 className="font-black text-blue-700 text-base mb-1">🔑 API 키 업데이트</h2>
+        <p className="text-gray-400 text-xs mb-3">서버를 재시작하지 않고 API 키를 교체할 수 있습니다.<br/>키는 서버 메모리에만 저장되며, 클라이언트에 절대 노출되지 않습니다.</p>
         <div className="flex gap-2">
           <input
             type="password"
@@ -190,14 +231,13 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
             onClick={handleSaveApiKey}
             disabled={!newApiKey.trim()}
             className={`px-4 py-2 rounded-xl font-black text-sm transition-all disabled:opacity-40 ${
-              apiKeySaved
-                ? 'bg-green-400 text-white'
-                : 'bg-blue-500 text-white hover:bg-blue-600'
+              apiKeySaved ? 'bg-green-400 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'
             }`}
           >
             {apiKeySaved ? '✅ 저장됨' : '저장'}
           </button>
         </div>
+        {apiKeyError && <p className="text-red-500 text-xs mt-2">{apiKeyError}</p>}
       </div>
 
       {/* ── 전체 기록 복사 ── */}
@@ -226,8 +266,8 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
               className="w-full bg-white rounded-2xl p-4 shadow-sm card-hover text-left border-2 border-transparent hover:border-orange-200"
             >
               <div className="flex items-center gap-3 mb-1">
-                <span className="text-xl">{modeEmoji[s.mode]}</span>
-                <span className="font-black text-gray-700">{modeLabel[s.mode]} 연습</span>
+                <span className="text-xl">{modeEmoji[s.mode] || '✍️'}</span>
+                <span className="font-black text-gray-700">{modeLabel[s.mode] || s.mode} 연습</span>
                 <span className="ml-auto bg-orange-100 text-orange-600 font-black text-sm px-3 py-0.5 rounded-full">
                   {s.score}점
                 </span>
@@ -259,6 +299,9 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
                         {s.feedback.reporter_tip && (
                           <p><span className="font-bold">기자 팁:</span> {s.feedback.reporter_tip}</p>
                         )}
+                        {s.feedback.completeness_feedback && (
+                          <p><span className="font-bold">완성도:</span> {s.feedback.completeness_feedback}</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -269,7 +312,7 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
         </div>
       )}
 
-      {/* ── 초기화 버튼 ── */}
+      {/* ── 초기화 ── */}
       <div className="border-t-2 border-red-100 pt-5 mt-2">
         <h2 className="font-black text-red-500 text-base mb-2">⚠️ 데이터 초기화</h2>
         <p className="text-gray-400 text-xs mb-3">학생 이름, 누적 점수, 학습 기록이 모두 삭제됩니다. 되돌릴 수 없어요.</p>
@@ -281,7 +324,6 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
         </button>
       </div>
 
-      {/* Reset confirm modal */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-50 px-4">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl slide-up">
@@ -294,13 +336,13 @@ export default function TeacherDashboard({ profile, onBack, onReset }) {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowResetConfirm(false)}
-                className="flex-1 bg-gray-100 text-gray-600 font-black py-3 rounded-2xl hover:bg-gray-200"
+                className="flex-1 bg-gray-100 text-gray-600 font-black py-3 rounded-2xl"
               >
                 취소
               </button>
               <button
                 onClick={handleReset}
-                className="flex-1 bg-red-500 text-white font-black py-3 rounded-2xl hover:bg-red-600"
+                className="flex-1 bg-red-500 text-white font-black py-3 rounded-2xl"
               >
                 초기화
               </button>

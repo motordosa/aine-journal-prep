@@ -53,7 +53,7 @@ function Guide({ onStart }) {
   );
 }
 
-export default function LongPractice({ profile, onDone, apiKey }) {
+export default function LongPractice({ profile, onDone }) {
   const [step, setStep] = useState('guide');
   const [topic, setTopic] = useState('');
   const [text, setText] = useState('');
@@ -68,8 +68,7 @@ export default function LongPractice({ profile, onDone, apiKey }) {
     try {
       const res = await callClaude(
         TOPIC_SYSTEM_PROMPT,
-        '단락 글쓰기용 주제를 1개 만들어주세요 (3~5문장으로 쓸 수 있는 초등학생 일상 주제)',
-        apiKey
+        '단락 글쓰기용 주제를 1개 만들어주세요 (3~5문장으로 쓸 수 있는 초등학생 일상 주제)'
       );
       setTopic(res.topic);
       setStep('practice');
@@ -81,11 +80,11 @@ export default function LongPractice({ profile, onDone, apiKey }) {
   };
 
   const submit = async () => {
-    if (text.trim().length < 20) { setError('조금 더 자세히 써봐요! (20자 이상)'); return; }
+    if (text.trim().length < 100) { setError('조금 더 자세히 써봐요! 최소 100자 이상이 필요해요.'); return; }
     setError('');
     setLoading(true);
     try {
-      const res = await callClaude(LONG_SYSTEM_PROMPT, `주제: ${topic}\n\n학생이 쓴 글:\n${text}`, apiKey);
+      const res = await callClaude(LONG_SYSTEM_PROMPT, `주제: ${topic}\n\n학생이 쓴 글:\n${text}`);
       setFeedback(res);
       setScore(res.score);
       setStep('feedback');
@@ -113,9 +112,17 @@ export default function LongPractice({ profile, onDone, apiKey }) {
 
       {step === 'practice' && (
         <div className="slide-up pb-20">
-          <div className="bg-gradient-to-r from-green-400 to-teal-400 rounded-3xl p-5 mb-5 text-white">
+          <div className="bg-gradient-to-r from-green-400 to-teal-400 rounded-3xl p-5 mb-5 text-white relative">
             <div className="text-sm font-bold opacity-80 mb-1">✏️ 오늘의 주제</div>
-            <div className="text-lg font-black">{topic}</div>
+            <div className="text-lg font-black pr-16">{topic}</div>
+            <button
+              onClick={startPractice}
+              disabled={loading}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-xl transition-all"
+              title="새 문제"
+            >
+              🔄
+            </button>
           </div>
 
           <div className="flex gap-3 mb-2">
@@ -136,13 +143,18 @@ export default function LongPractice({ profile, onDone, apiKey }) {
               />
             </div>
           </div>
-          <div className="text-right text-xs text-gray-400 mb-4">{text.length}자</div>
+          <div className="flex justify-between items-center text-xs mt-1 mb-4">
+            <span className={text.length < 100 ? 'text-red-400 font-bold' : 'text-green-500 font-bold'}>
+              {text.length < 100 ? `⚠️ ${100 - text.length}자 더 필요해요` : '✅ 충분해요!'}
+            </span>
+            <span className="text-gray-400">{text.length}자 / 최소 100자</span>
+          </div>
 
           {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
 
           <button
             onClick={submit}
-            disabled={text.trim().length < 20}
+            disabled={text.trim().length < 100}
             className="w-full bg-gradient-to-r from-green-400 to-teal-400 text-white font-black py-5 rounded-2xl text-xl shadow-xl hover:from-green-500 hover:to-teal-500 disabled:opacity-50"
           >
             📤 선생님께 보내기

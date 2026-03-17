@@ -16,7 +16,6 @@ function StarBurst({ x, y, emoji }) {
   );
 }
 
-// Hardcoded color maps to avoid Tailwind purge of dynamic class names
 const SECTION_STYLES = {
   intro: {
     wrapper: 'bg-purple-50 border-2 border-purple-200 rounded-2xl p-5',
@@ -32,7 +31,7 @@ const SECTION_STYLES = {
   },
 };
 
-export default function FeedbackView({ feedback, mode, score, onDone }) {
+export default function FeedbackView({ feedback, mode, score, onDone, onNext, isExpired }) {
   const [stars, setStars] = useState([]);
   const [showScore, setShowScore] = useState(false);
 
@@ -58,18 +57,15 @@ export default function FeedbackView({ feedback, mode, score, onDone }) {
     </div>
   );
 
-  // Normalize checklist: Claude should return {누가: true, ...} but be defensive
   const SIX_W_KEYS = ['누가', '언제', '어디서', '무엇을', '어떻게', '왜'];
   const rawChecklist = feedback.checklist || feedback.six_w_check;
   const checklist = (() => {
     if (!rawChecklist) return null;
-    // If it's an array (unexpected), map to object with Korean keys
     if (Array.isArray(rawChecklist)) {
       const obj = {};
       SIX_W_KEYS.forEach((k, i) => { obj[k] = rawChecklist[i] ?? false; });
       return obj;
     }
-    // If keys are numeric (0,1,2...) from bad mock, remap
     const keys = Object.keys(rawChecklist);
     if (keys.length > 0 && !isNaN(keys[0])) {
       const obj = {};
@@ -78,7 +74,8 @@ export default function FeedbackView({ feedback, mode, score, onDone }) {
     }
     return rawChecklist;
   })();
-  const maxScore = mode === 'short' ? 20 : mode === 'long' ? 30 : 50;
+
+  const maxScore = mode === 'short' ? 20 : mode === 'editorial' ? 50 : 30;
 
   const editorialSections = [
     { key: 'intro_feedback', label: '📖 서론', style: SECTION_STYLES.intro },
@@ -109,7 +106,7 @@ export default function FeedbackView({ feedback, mode, score, onDone }) {
         </div>
       )}
 
-      {/* Checklist (short + editorial) */}
+      {/* 6W Checklist (short + editorial) */}
       {checklist && (
         <div className="bg-white border-2 border-gray-100 rounded-2xl p-5 shadow-sm">
           <h3 className="font-black text-gray-700 text-lg mb-3">📋 6하 원칙 체크</h3>
@@ -121,7 +118,7 @@ export default function FeedbackView({ feedback, mode, score, onDone }) {
         </div>
       )}
 
-      {/* Short practice: missing elements + improved example */}
+      {/* Short: missing + example */}
       {mode === 'short' && feedback.missing && (
         <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-5">
           <h3 className="font-black text-orange-700 text-lg mb-2">💡 이걸 추가해 봐요!</h3>
@@ -129,7 +126,7 @@ export default function FeedbackView({ feedback, mode, score, onDone }) {
         </div>
       )}
 
-      {/* Long practice: structure analysis */}
+      {/* Long: structure analysis */}
       {mode === 'long' && feedback.structure_analysis && (
         <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-5">
           <h3 className="font-black text-blue-700 text-lg mb-3">🏗️ 단락 구조 분석</h3>
@@ -148,7 +145,7 @@ export default function FeedbackView({ feedback, mode, score, onDone }) {
         </div>
       )}
 
-      {/* Editorial: section-by-section feedback */}
+      {/* Editorial: section feedback */}
       {mode === 'editorial' && editorialSections.map(({ key, label, style }) =>
         feedback[key] ? (
           <div key={key} className={style.wrapper}>
@@ -172,7 +169,7 @@ export default function FeedbackView({ feedback, mode, score, onDone }) {
         ) : null
       )}
 
-      {/* Editorial: best sentence */}
+      {/* Editorial: best sentence + reporter tip */}
       {mode === 'editorial' && feedback.best_sentence && (
         <div className="bg-pink-50 border-2 border-pink-200 rounded-2xl p-5">
           <h3 className="font-black text-pink-700 text-lg mb-2">⭐ 가장 잘 쓴 문장</h3>
@@ -181,12 +178,61 @@ export default function FeedbackView({ feedback, mode, score, onDone }) {
           </blockquote>
         </div>
       )}
-
-      {/* Editorial: reporter tip */}
       {mode === 'editorial' && feedback.reporter_tip && (
         <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-5">
           <h3 className="font-black text-indigo-700 text-lg mb-2">📰 기자 팁!</h3>
           <p className="text-gray-700">{feedback.reporter_tip}</p>
+        </div>
+      )}
+
+      {/* Summary mode: key points check */}
+      {mode === 'summary' && feedback.key_points_check && (
+        <div className="bg-white border-2 border-gray-100 rounded-2xl p-5 shadow-sm">
+          <h3 className="font-black text-gray-700 text-lg mb-3">🔍 핵심 내용 체크</h3>
+          <div className="space-y-2">
+            {feedback.key_points_check.map((item, i) => (
+              <div key={i} className={`flex items-start gap-3 p-3 rounded-xl ${item.included ? 'bg-green-50' : 'bg-red-50'}`}>
+                <span className="text-lg flex-shrink-0">{item.included ? '✅' : '❌'}</span>
+                <div>
+                  <p className={`font-bold text-sm ${item.included ? 'text-green-700' : 'text-red-700'}`}>{item.point}</p>
+                  {item.note && <p className={`text-xs mt-0.5 ${item.included ? 'text-green-600' : 'text-red-500'}`}>{item.note}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Summary: spelling errors */}
+      {mode === 'summary' && feedback.spelling_errors && feedback.spelling_errors.length > 0 && (
+        <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-5">
+          <h3 className="font-black text-orange-700 text-lg mb-3">✏️ 맞춤법 & 문법 수정</h3>
+          <div className="space-y-1">
+            {feedback.spelling_errors.map((err, i) => (
+              <p key={i} className="text-sm text-gray-700 bg-white rounded-lg px-3 py-2">• {err}</p>
+            ))}
+          </div>
+          {feedback.grammar_feedback && (
+            <p className="text-sm text-orange-700 mt-3">{feedback.grammar_feedback}</p>
+          )}
+        </div>
+      )}
+
+      {/* Summary: completeness */}
+      {mode === 'summary' && feedback.completeness_feedback && (
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-5">
+          <h3 className="font-black text-blue-700 text-lg mb-2">📋 요약 완성도</h3>
+          <p className="text-gray-700 text-sm">{feedback.completeness_feedback}</p>
+        </div>
+      )}
+
+      {/* Summary: model summary */}
+      {mode === 'summary' && feedback.model_summary && (
+        <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-5">
+          <h3 className="font-black text-purple-700 text-lg mb-2">✨ 모범 요약 예시</h3>
+          <p className="text-gray-700 leading-relaxed bg-white rounded-xl p-4 border border-purple-100 text-sm">
+            {feedback.model_summary}
+          </p>
         </div>
       )}
 
@@ -215,12 +261,24 @@ export default function FeedbackView({ feedback, mode, score, onDone }) {
         </div>
       )}
 
-      <button
-        onClick={onDone}
-        className="w-full bg-gradient-to-r from-orange-400 to-pink-400 text-white font-black py-5 rounded-2xl text-xl shadow-xl hover:from-orange-500 hover:to-pink-500 transition-all mt-2"
-      >
-        🏠 연습 완료! 홈으로 가기
-      </button>
+      {/* Action buttons */}
+      <div className="space-y-3">
+        {/* Next problem (summary only, if not expired) */}
+        {mode === 'summary' && onNext && !isExpired && (
+          <button
+            onClick={onNext}
+            className="w-full bg-gradient-to-r from-purple-400 to-violet-400 text-white font-black py-4 rounded-2xl text-lg shadow-xl hover:from-purple-500 hover:to-violet-500 transition-all"
+          >
+            ➡️ 다음 지문 풀기
+          </button>
+        )}
+        <button
+          onClick={onDone}
+          className="w-full bg-gradient-to-r from-orange-400 to-pink-400 text-white font-black py-5 rounded-2xl text-xl shadow-xl hover:from-orange-500 hover:to-pink-500 transition-all"
+        >
+          🏠 연습 완료! 홈으로 가기
+        </button>
+      </div>
     </div>
   );
 }

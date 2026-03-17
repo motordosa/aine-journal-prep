@@ -1,9 +1,11 @@
 import CharacterDisplay from '../components/CharacterDisplay';
 import { getLevel, getStreakBadges } from '../utils/storage';
+import { useSession } from '../context/SessionContext';
 
 export default function HomePage({ profile, onNavigate, onOpenTeacher }) {
   const { title } = getLevel(profile.totalScore);
   const badges = getStreakBadges(profile);
+  const { isExpired, timeDisplay } = useSession();
 
   const modes = [
     {
@@ -33,6 +35,15 @@ export default function HomePage({ profile, onNavigate, onOpenTeacher }) {
       color: 'from-orange-400 to-pink-400',
       bg: 'bg-orange-50',
     },
+    {
+      id: 'summary',
+      emoji: '✍️',
+      title: '문장 요약',
+      subtitle: '핵심 내용 요약하기',
+      desc: '30점 만점',
+      color: 'from-purple-400 to-violet-400',
+      bg: 'bg-purple-50',
+    },
   ];
 
   return (
@@ -44,6 +55,22 @@ export default function HomePage({ profile, onNavigate, onOpenTeacher }) {
         </h1>
         <p className="text-gray-500 text-sm mt-1">오늘도 열심히 글을 써봐요!</p>
       </div>
+
+      {/* Level-up banner */}
+      {profile.isLevelUp && (
+        <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-4 mb-4 text-white text-center font-black text-lg shadow-xl animate-bounce">
+          🎉 레벨 업! 축하해요!
+        </div>
+      )}
+
+      {/* Session expired warning */}
+      {isExpired && (
+        <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 mb-4 text-center">
+          <div className="text-2xl mb-1">⏰</div>
+          <p className="font-black text-red-600">40분 학습 시간이 종료되었습니다!</p>
+          <p className="text-red-400 text-sm">결과를 선생님께 제출하세요.</p>
+        </div>
+      )}
 
       {/* Character */}
       <div className="bg-white rounded-3xl shadow-lg p-6 mb-5 card-hover">
@@ -81,8 +108,9 @@ export default function HomePage({ profile, onNavigate, onOpenTeacher }) {
         {modes.map(m => (
           <button
             key={m.id}
-            onClick={() => onNavigate(m.id)}
-            className={`w-full flex items-center gap-4 bg-white rounded-2xl p-5 shadow-md card-hover border-2 border-transparent hover:border-orange-200 text-left transition-all`}
+            onClick={() => !isExpired && onNavigate(m.id)}
+            disabled={isExpired}
+            className={`w-full flex items-center gap-4 bg-white rounded-2xl p-5 shadow-md card-hover border-2 border-transparent hover:border-orange-200 text-left transition-all ${isExpired ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${m.color} flex items-center justify-center text-2xl shadow-md flex-shrink-0`}>
               {m.emoji}

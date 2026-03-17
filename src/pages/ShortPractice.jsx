@@ -59,7 +59,7 @@ function Guide({ onStart }) {
   );
 }
 
-export default function ShortPractice({ profile, onDone, apiKey }) {
+export default function ShortPractice({ profile, onDone }) {
   const [step, setStep] = useState('guide'); // guide | practice | feedback
   const [topic, setTopic] = useState('');
   const [text, setText] = useState('');
@@ -74,8 +74,7 @@ export default function ShortPractice({ profile, onDone, apiKey }) {
     try {
       const res = await callClaude(
         TOPIC_SYSTEM_PROMPT,
-        '단문 연습용 주제를 1개 만들어주세요 (6하 원칙 연습에 적합한 초등학생 일상 주제)',
-        apiKey
+        '단문 연습용 주제를 1개 만들어주세요 (6하 원칙 연습에 적합한 초등학생 일상 주제)'
       );
       setTopic(res.topic);
       setStep('practice');
@@ -87,11 +86,11 @@ export default function ShortPractice({ profile, onDone, apiKey }) {
   };
 
   const submit = async () => {
-    if (text.trim().length < 5) { setError('문장을 조금 더 써봐요!'); return; }
+    if (text.trim().length < 20) { setError('최소 20자 이상 써주세요! 조금 더 풍성하게 써볼까요?'); return; }
     setError('');
     setLoading(true);
     try {
-      const res = await callClaude(SHORT_SYSTEM_PROMPT, `주제: ${topic}\n\n학생이 쓴 문장:\n${text}`, apiKey);
+      const res = await callClaude(SHORT_SYSTEM_PROMPT, `주제: ${topic}\n\n학생이 쓴 문장:\n${text}`);
       setFeedback(res);
       setScore(res.score);
       setStep('feedback');
@@ -129,9 +128,17 @@ export default function ShortPractice({ profile, onDone, apiKey }) {
 
       {step === 'practice' && (
         <div className="slide-up pb-20">
-          <div className="bg-gradient-to-r from-blue-400 to-cyan-400 rounded-3xl p-5 mb-5 text-white">
+          <div className="bg-gradient-to-r from-blue-400 to-cyan-400 rounded-3xl p-5 mb-5 text-white relative">
             <div className="text-sm font-bold opacity-80 mb-1">✏️ 오늘의 주제</div>
-            <div className="text-lg font-black">{topic}</div>
+            <div className="text-lg font-black pr-16">{topic}</div>
+            <button
+              onClick={startPractice}
+              disabled={loading}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-xl transition-all"
+              title="새 문제"
+            >
+              🔄
+            </button>
           </div>
 
           <div className="flex gap-3">
@@ -142,7 +149,12 @@ export default function ShortPractice({ profile, onDone, apiKey }) {
                 placeholder="여기에 문장을 써보세요..."
                 className="w-full h-36 border-2 border-gray-200 rounded-2xl p-4 text-base focus:outline-none focus:border-blue-400 resize-none transition-colors"
               />
-              <div className="text-right text-xs text-gray-400 mt-1">{text.length}자</div>
+              <div className="flex justify-between items-center text-xs mt-1">
+                <span className={text.length < 20 ? 'text-red-400 font-bold' : 'text-green-500 font-bold'}>
+                  {text.length < 20 ? `⚠️ ${20 - text.length}자 더 필요해요` : '✅ 충분해요!'}
+                </span>
+                <span className="text-gray-400">{text.length}자 / 최소 20자</span>
+              </div>
             </div>
 
             {/* Live checklist */}
@@ -165,7 +177,7 @@ export default function ShortPractice({ profile, onDone, apiKey }) {
 
           <button
             onClick={submit}
-            disabled={text.trim().length < 5}
+            disabled={text.trim().length < 20}
             className="w-full bg-gradient-to-r from-blue-400 to-cyan-400 text-white font-black py-5 rounded-2xl text-xl shadow-xl mt-4 hover:from-blue-500 hover:to-cyan-500 disabled:opacity-50 transition-all"
           >
             📤 선생님께 보내기
