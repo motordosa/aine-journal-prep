@@ -1,6 +1,11 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -119,6 +124,14 @@ app.post('/api/teacher/update-key', (req, res) => {
   apiKey = newKey.trim();
   console.log('[Teacher] API key updated at', new Date().toISOString());
   res.json({ ok: true, message: 'API 키가 업데이트되었습니다.' });
+});
+
+// ── Static Files & Catch-all (for Production) ────────────────────────────────
+const buildPath = path.join(__dirname, '../dist');
+app.use(express.static(buildPath));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(buildPath, 'index.html'));
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
