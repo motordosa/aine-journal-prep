@@ -83,12 +83,25 @@ app.post('/api/claude', async (req, res) => {
 
     // Parse JSON from Claude's text response
     const text = data.content?.[0]?.text || '';
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return res.status(500).json({ error: 'AI 응답에서 JSON을 찾을 수 없어요.' });
+    // Try to extract JSON - handle markdown code blocks and nested objects
+    let parsed = null;
+    const cleanText = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch {
+        // Try to fix trailing commas
+        const fixedJson = jsonMatch[0].replace(/,\s*([}\]])/g, '$1');
+        try { parsed = JSON.parse(fixedJson); } catch { parsed = null; }
+      }
+    }
+    if (!parsed) {
+      console.error('[/api/claude] Failed to parse JSON. Raw response:', text.slice(0, 500));
+      return res.status(500).json({ error: 'AI가 올바른 형식으로 응답하지 않았어요. 잠시 후 다시 시도해주세요.' });
     }
 
-    res.json({ result: JSON.parse(jsonMatch[0]), cost: getEstimatedCost().toFixed(4) });
+    res.json({ result: parsed, cost: getEstimatedCost().toFixed(4) });
   } catch (err) {
     console.error('[/api/claude] error:', err);
     res.status(500).json({ error: err.message || 'Internal server error' });

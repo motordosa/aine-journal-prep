@@ -52,7 +52,7 @@ export default function App() {
     }
 
     const prevLevel = getLevel(profile.totalScore).level;
-    const newScore = Math.min((profile.totalScore || 0) + score, 100);
+    const newScore = (profile.totalScore || 0) + score;
     const newLevel = getLevel(newScore).level;
 
     const updatedProfile = {

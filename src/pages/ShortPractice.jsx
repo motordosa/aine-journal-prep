@@ -70,6 +70,8 @@ export default function ShortPractice({ profile, onDone }) {
 
   const startPractice = async () => {
     setError('');
+    setText('');
+    setFeedback(null);
     setLoading(true);
     try {
       const res = await callClaude(

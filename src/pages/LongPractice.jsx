@@ -64,6 +64,8 @@ export default function LongPractice({ profile, onDone }) {
 
   const startPractice = async () => {
     setError('');
+    setTexts({ intro: '', body: '', conclusion: '' });
+    setFeedback(null);
     setLoading(true);
     try {
       const res = await callClaude(
@@ -157,6 +159,7 @@ export default function LongPractice({ profile, onDone }) {
           {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
 
           <button
+            onClick={submit}
             disabled={totalLen < 100}
             className="w-full bg-gradient-to-r from-green-400 to-teal-400 text-white font-black py-5 rounded-2xl text-xl shadow-xl hover:from-green-500 hover:to-teal-500 disabled:opacity-50"
           >

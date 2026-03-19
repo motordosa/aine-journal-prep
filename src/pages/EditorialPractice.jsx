@@ -76,6 +76,8 @@ export default function EditorialPractice({ profile, onDone }) {
   const fetchNewTopic = async () => {
     setLoading(true);
     setError('');
+    setTexts({ intro: '', body: '', conclusion: '' });
+    setFeedback(null);
     try {
       const res = await callClaude(
         TOPIC_SYSTEM_PROMPT,
